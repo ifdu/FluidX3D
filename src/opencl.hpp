@@ -335,7 +335,6 @@ private:
 	ulong N = 0ull; // buffer length
 	uint d = 1u; // buffer dimensions
 	bool host_buffer_exists = false;
-	bool device_buffer_exists = false;
 	bool external_host_buffer = false; // Memory object has been created with an externally supplied host buffer/pointer
 	bool is_zero_copy = false; // if possible (device is CPU or iGPU), and if allowed by user, use zero-copy buffer: host+device buffers are fused into one
 	T* host_buffer = nullptr; // host buffer
@@ -380,6 +379,7 @@ private:
 		}
 	}
 public:
+	bool device_buffer_exists = false;
 	T *x=nullptr, *y=nullptr, *z=nullptr, *w=nullptr; // host buffer auxiliary pointers for multi-dimensional array access (array of structures)
 	T *s0=nullptr, *s1=nullptr, *s2=nullptr, *s3=nullptr, *s4=nullptr, *s5=nullptr, *s6=nullptr, *s7=nullptr, *s8=nullptr, *s9=nullptr, *sA=nullptr, *sB=nullptr, *sC=nullptr, *sD=nullptr, *sE=nullptr, *sF=nullptr;
 	inline Memory(Device& device, const ulong N, const uint dimensions=1u, const bool allocate_host=true, const bool allocate_device=true, const T value=(T)0, const bool allow_zero_copy=true) {
@@ -619,7 +619,11 @@ private:
 		if(error!=0) print_error("OpenCL kernel \""+name+"(...)\" failed with error code "+to_string(error)+"!");
 	}
 	template<typename T> inline void link_parameter(const uint position, const Memory<T>& memory) {
-		check_for_errors(cl_kernel.setArg(position, memory.get_cl_buffer()));
+		if(memory.device_buffer_exists) {
+			check_for_errors(cl_kernel.setArg(position, memory.get_cl_buffer()));
+		} else {
+			clSetKernelArgSVMPointer(cl_kernel(), position, memory.data());
+		}
 	}
 	template<typename T> inline void link_parameter(const uint position, const T& constant) {
 		check_for_errors(cl_kernel.setArg(position, sizeof(T), (void*)&constant));
