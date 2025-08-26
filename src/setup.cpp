@@ -22,6 +22,19 @@ void main_setup() { // benchmark; required extensions in defines.hpp: BENCHMARK,
 		//LBM lbm(2u*lbm_N.x, 2u*lbm_N.y, 1u*lbm_N.z, 2u, 2u, 1u, 1.0f); // 4 GPUs
 		//LBM lbm(2u*lbm_N.x, 2u*lbm_N.y, 2u*lbm_N.z, 2u, 2u, 2u, 1.0f); // 8 GPUs
 
+		const uint Nx=lbm.get_Nx(), Ny=lbm.get_Ny(), Nz=lbm.get_Nz(); parallel_for(lbm.get_N(), [&](ulong n) { uint x=0u, y=0u, z=0u; lbm.coordinates(n, x, y, z);
+			const float A = 0.25f;
+			const uint periodicity = 1u;
+			const float a=(float)Nx/(float)periodicity, b=(float)Ny/(float)periodicity, c=(float)Nz/(float)periodicity;
+			const float fx = (float)x+0.5f-0.5f*(float)Nx;
+			const float fy = (float)y+0.5f-0.5f*(float)Ny;
+			const float fz = (float)z+0.5f-0.5f*(float)Nz;
+			lbm.u.x[n] =  A*cosf(2.0f*pif*fx/a)*sinf(2.0f*pif*fy/b)*sinf(2.0f*pif*fz/c);
+			lbm.u.y[n] = -A*sinf(2.0f*pif*fx/a)*cosf(2.0f*pif*fy/b)*sinf(2.0f*pif*fz/c);
+			lbm.u.z[n] =  A*sinf(2.0f*pif*fx/a)*sinf(2.0f*pif*fy/b)*cosf(2.0f*pif*fz/c);
+			lbm.rho[n] = 1.0f-sq(A)*3.0f/4.0f*(cosf(4.0f*pif*fx/a)+cosf(4.0f*pif*fy/b));
+		});
+
 		// #########################################################################################################################################################################################
 		for(uint i=0u; i<1000u; i++) {
 			lbm.run(10u, 1000u*10u);
